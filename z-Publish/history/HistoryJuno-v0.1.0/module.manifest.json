@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "type": "HistoryVulcan.Module",
+  "name": "HistoryJuno",
+  "version": "0.1.0",
+  "description": "Sub2API 轻量桌面控制面板",
+  "artifact": "HistoryJuno.dll",
+  "docs": "HistoryJuno.xml",
+  "mcpExposure": "readonly",
+  "ui": true,
+  "pinned": false
+}
