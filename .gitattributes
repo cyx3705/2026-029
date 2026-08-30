@@ -1,0 +1,9 @@
+# 极保守 LFS 策略：不按扩展名批量套 LFS。
+# 旧的按扩展名通配（*.asm / *.baml 这类文本也在内）是 11GB LFS 占用
+# 与推送被 GitHub pre-receive 拒收的根因。
+# 下面只逐条列出**已经是 LFS 指针**的现存文件，保证这些指针不失效；
+# 新文件一律不自动进 LFS——只有单个文件超过 GitHub 100MB 硬限时，
+# 才由提交链路逐个征求人工同意后按精确路径追加。
+* text=auto
+
+Logo.png filter=lfs diff=lfs merge=lfs -text
