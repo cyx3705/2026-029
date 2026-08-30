@@ -33,9 +33,9 @@ internal static class JunoPages
             {
                 new
                 {
-                    id = "dashboard",
+                    id = "sub2api",
                     title = "Sub2API 控制面板",
-                    placement = new { side = "center", visible = true, singleton = true },
+                    placement = new { side = "right", visible = true, singleton = true },
                     content = new
                     {
                         type = "stack",
