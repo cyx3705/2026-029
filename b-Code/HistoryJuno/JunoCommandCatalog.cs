@@ -1,0 +1,118 @@
+using System.Net.Sockets;
+using System.Text.Json;
+using System.Text.Encodings.Web;
+using HistoryVulcan.Core.Commands;
+
+namespace HistoryJuno;
+
+internal static class JunoCommandCatalog
+{
+    private const string Domain = "juno";
+    private const string Owner = "HistoryJuno";
+
+    public static void Register(CommandRegistry registry, CommandBus bus)
+    {
+        registry.Register(Internal(
+            "juno.ui.describe",
+            "返回 Sub2API 控制面板页面描述。",
+            _ => CommandResult.Ok(JunoPages.DescribeJson(), JunoPages.DescribeJson())));
+
+        registry.Register(Internal(
+            "juno.ui.actions",
+            "返回 Sub2API 控制面板动作声明。",
+            _ => CommandResult.Ok(JunoPages.ActionsJson(), JunoPages.ActionsJson())));
+
+        registry.Register(new CommandDescriptor
+        {
+            Name = "juno.ui.data",
+            Domain = Domain,
+            CommandClass = "ui",
+            Summary = "返回 Sub2API 控制面板状态行。",
+            Readonly = true,
+            HiddenReason = "界面内部协议，对模型无意义",
+            Parameters =
+            [
+                new ParameterSpec
+                {
+                    Name = "view",
+                    Description = "取数视图：status。",
+                    Required = false,
+                    Position = 0,
+                },
+            ],
+            Handler = _ => JunoPages.ReadDataAsync(),
+        });
+
+        registry.Register(new CommandDescriptor
+        {
+            Name = "juno.sub2api.start",
+            Domain = Domain,
+            CommandClass = "sub2api",
+            Summary = "启动 Sub2API 服务。",
+            Level = CommandLevel.Run,
+            Handler = async context => await RunScriptAsync("sub2api-tool.ps1", "start", context).ConfigureAwait(false),
+        });
+
+        registry.Register(new CommandDescriptor
+        {
+            Name = "juno.proxy.connect",
+            Domain = Domain,
+            CommandClass = "proxy",
+            Summary = "连接本机代理并刷新代理转发状态。",
+            Level = CommandLevel.Run,
+            Handler = async context => await RunScriptAsync("proxy-reconnect.ps1", null, context).ConfigureAwait(false),
+        });
+
+        registry.Register(new CommandDescriptor
+        {
+            Name = "juno.sub2api.stop",
+            Domain = Domain,
+            CommandClass = "sub2api",
+            Summary = "关闭 Sub2API 服务。",
+            Level = CommandLevel.Ask,
+            ConfirmPrompt = _ => "确认关闭 Sub2API 服务？",
+            Handler = async context => await RunScriptAsync("sub2api-tool.ps1", "stop", context).ConfigureAwait(false),
+        });
+
+        registry.Register(new CommandDescriptor
+        {
+            Name = "juno.sub2api.status",
+            Domain = Domain,
+            CommandClass = "sub2api",
+            Summary = "检查 Sub2API 与本机代理端口状态。",
+            Readonly = true,
+            Handler = _ => JunoPages.ReadDataAsync(),
+        });
+    }
+
+    private static CommandDescriptor Internal(
+        string name,
+        string summary,
+        Func<CommandContext, CommandResult> handler)
+        => new()
+        {
+            Name = name,
+            Domain = Domain,
+            CommandClass = "ui",
+            Summary = summary,
+            Readonly = true,
+            HiddenReason = "界面内部协议，对模型无意义",
+            Handler = CommandDescriptor.Sync(handler),
+        };
+
+    private static async Task<CommandResult> RunScriptAsync(
+        string script,
+        string? argument,
+        CommandContext context)
+    {
+        var args = argument == null ? Array.Empty<string>() : new[] { argument };
+        var result = await Sub2ApiProcessRunner.RunAsync(script, args, context.Cancellation)
+            .ConfigureAwait(false);
+        var message = result.Success
+            ? $"{script} 执行完成。"
+            : $"{script} 执行失败（退出码 {result.ExitCode}）。";
+        if (!string.IsNullOrWhiteSpace(result.Output))
+            message += Environment.NewLine + result.Output;
+        return result.Success ? CommandResult.Ok(message) : CommandResult.Fail(message);
+    }
+}

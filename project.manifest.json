@@ -6,23 +6,24 @@
     "strictValidationArgument": "-Instantiation"
   },
   "project": {
-    "id": "0000-001",
-    "name": "AIReady",
-    "title": "OneHistory AI-Ready \u9879\u76EE\u6A21\u677F",
+    "id": "2026-029",
+    "name": "HistoryJuno",
+    "title": "HistoryJuno Sub2API \u8F7B\u91CF\u63A7\u5236\u9762\u677F",
     "kind": [
-      "template",
-      "multidisciplinary"
+      "desktop-module",
+      "integration"
     ],
-    "status": "template"
+    "status": "active"
   },
   "paths": {
     "activeRoots": [
       "b-Office/current",
       "b-Office/package",
+      "b-Code/HistoryJuno",
       "b-Code"
     ],
     "sourceRoots": [
-      "b-Code"
+      "b-Code/HistoryJuno"
     ],
     "generatedRoots": [],
     "archiveRoots": [
@@ -46,13 +47,16 @@
   },
   "commands": {
     "setup": null,
-    "build": null,
+    "build": "dotnet build .\\b-Code\\HistoryJuno\\HistoryJuno.csproj -c Release -p:HistoryVulcanPackageRoot=C:\\OneHistory\\HistoryClio\\2026-023-HistoryVulcan\\z-Publish -p:NuGetAudit=false -p:BaseIntermediateOutputPath=C:\\Users\\Administrator\\Desktop\\easyTOOL\\SU2API\\.build\\obj\\ -p:OutputPath=C:\\Users\\Administrator\\Desktop\\easyTOOL\\SU2API\\.build\\bin\\",
     "test": null,
-    "verify": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\b-Code\\Test-ProjectContract.ps1",
+    "verify": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\b-Code\\Test-ProjectContract.ps1 -Instantiation",
     "run": null,
     "package": null
   },
-  "externalDependencies": [],
+  "externalDependencies": [
+    "HistoryVulcan 5.1.2 发布快照：C:\\OneHistory\\HistoryClio\\2026-023-HistoryVulcan\\z-Publish",
+    "Sub2API 工具脚本：%USERPROFILE%\\Desktop\\easyTOOL\\SU2API 或 SUB2API_TOOL_ROOT"
+  ],
   "contextExclusions": [
     "b-Office/history/**",
     "b-Publish/**",
