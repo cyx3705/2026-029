@@ -188,6 +188,21 @@ static async Task TestStartupRunnerAsync()
     True(composeCommand.Contains("docker compose up -d", StringComparison.Ordinal), "compose start is missing");
     True(!composeCommand.Contains("curl", StringComparison.Ordinal), "startup still contains the blocking proxy probe");
 
+    var steps = new List<string>();
+    var startup = await Sub2ApiStartupRunner.RunStartupStepsAsync(
+        "/mnt/c/deploy",
+        (step, _, _, _) =>
+        {
+            steps.Add(step);
+            return Task.FromResult(
+                steps.Count == 1
+                    ? new StartupResult(false, "docker returned 1")
+                    : new StartupResult(true, "compose started"));
+        },
+        CancellationToken.None);
+    True(startup.Success, "compose success did not override the Docker service exit code");
+    Equal(2, steps.Count);
+
     var previous = Environment.GetEnvironmentVariable("SUB2API_TOOL_ROOT");
     var root = Path.Combine(Path.GetTempPath(), $"HistoryJuno-runner-{Guid.NewGuid():N}");
     Directory.CreateDirectory(root);

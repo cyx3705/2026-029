@@ -34,24 +34,37 @@ internal static class Sub2ApiStartupRunner
                 "Sub2API 部署目录必须是可映射到 WSL /mnt/<drive> 的本机盘符路径。");
         }
 
-        var docker = await RunWslStepAsync(
+        return await RunStartupStepsAsync(
+                wslRoot,
+                RunWslStepAsync,
+                cancellation)
+            .ConfigureAwait(false);
+    }
+
+    internal static async Task<StartupResult> RunStartupStepsAsync(
+        string wslRoot,
+        Func<string, string, TimeSpan, CancellationToken, Task<StartupResult>> runStep,
+        CancellationToken cancellation)
+    {
+        var docker = await runStep(
                 "启动 Ubuntu Docker 服务",
                 "sudo -n service docker start",
                 DockerServiceTimeout,
                 cancellation)
             .ConfigureAwait(false);
-        if (!docker.Success)
-            return docker;
 
-        var compose = await RunWslStepAsync(
+        var compose = await runStep(
                 "启动 Sub2API compose",
                 BuildComposeCommand(wslRoot),
                 ComposeTimeout,
                 cancellation)
             .ConfigureAwait(false);
-        return compose.Success
-            ? new StartupResult(true, "Sub2API Docker 服务与 compose 容器已启动。")
-            : compose;
+        if (compose.Success)
+            return new StartupResult(true, "Sub2API Docker 服务与 compose 容器已启动。");
+
+        return docker.Success
+            ? compose
+            : new StartupResult(false, $"{docker.Message}{Environment.NewLine}{compose.Message}");
     }
 
     internal static string ResolveDeployRoot()
