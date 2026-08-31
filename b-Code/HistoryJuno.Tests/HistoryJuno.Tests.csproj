@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>HistoryJuno.Tests</AssemblyName>
+    <HistoryJunoOutputRoot Condition="'$(HistoryJunoOutputRoot)' == ''">$(USERPROFILE)\Desktop\easyTOOL\SU2API\.build\bin</HistoryJunoOutputRoot>
+    <HistoryVulcanHostRoot Condition="'$(HistoryVulcanHostRoot)' == ''">C:\OneHistory\HistoryClio\2026-023-HistoryVulcan\z-Publish\host</HistoryVulcanHostRoot>
+    <OutputPath>$(LOCALAPPDATA)\HistoryJuno\Tests\bin\</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="HistoryJuno">
+      <HintPath>$(HistoryJunoOutputRoot)\HistoryJuno.dll</HintPath>
+    </Reference>
+    <Reference Include="HistoryVulcan.Core">
+      <HintPath>$(HistoryVulcanHostRoot)\HistoryVulcan.Core.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

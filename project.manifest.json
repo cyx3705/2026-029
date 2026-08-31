@@ -48,14 +48,15 @@
   "commands": {
     "setup": null,
     "build": "dotnet build .\\b-Code\\HistoryJuno\\HistoryJuno.csproj -c Release -p:HistoryVulcanPackageRoot=C:\\OneHistory\\HistoryClio\\2026-023-HistoryVulcan\\z-Publish -p:NuGetAudit=false -p:BaseIntermediateOutputPath=C:\\Users\\Administrator\\Desktop\\easyTOOL\\SU2API\\.build\\obj\\ -p:OutputPath=C:\\Users\\Administrator\\Desktop\\easyTOOL\\SU2API\\.build\\bin\\",
-    "test": null,
+    "test": "dotnet run --project .\\b-Code\\HistoryJuno.Tests\\HistoryJuno.Tests.csproj -c Release -p:NuGetAudit=false",
     "verify": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\b-Code\\Test-ProjectContract.ps1 -Instantiation",
     "run": null,
     "package": null
   },
   "externalDependencies": [
     "HistoryVulcan 5.1.2 发布快照：C:\\OneHistory\\HistoryClio\\2026-023-HistoryVulcan\\z-Publish",
-    "Sub2API 工具脚本：%USERPROFILE%\\Desktop\\easyTOOL\\SU2API 或 SUB2API_TOOL_ROOT"
+    "Sub2API 工具脚本：%USERPROFILE%\\Desktop\\easyTOOL\\SU2API 或 SUB2API_TOOL_ROOT",
+    "Sub2API 管理接口：http://127.0.0.1:8080；凭据目录为 %USERPROFILE%\\Projects\\sub2api-deploy 或 SUB2API_DEPLOY_ROOT"
   ],
   "contextExclusions": [
     "b-Office/history/**",

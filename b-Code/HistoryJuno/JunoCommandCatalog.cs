@@ -1,6 +1,3 @@
-using System.Net.Sockets;
-using System.Text.Json;
-using System.Text.Encodings.Web;
 using HistoryVulcan.Core.Commands;
 
 namespace HistoryJuno;
@@ -27,7 +24,7 @@ internal static class JunoCommandCatalog
             Name = "juno.ui.data",
             Domain = Domain,
             CommandClass = "ui",
-            Summary = "返回 Sub2API 控制面板状态行。",
+            Summary = "返回 Sub2API 控制面板账号或服务状态行。",
             Readonly = true,
             HiddenReason = "界面内部协议，对模型无意义",
             Parameters =
@@ -35,12 +32,14 @@ internal static class JunoCommandCatalog
                 new ParameterSpec
                 {
                     Name = "view",
-                    Description = "取数视图：status。",
+                    Description = "取数视图：accounts / status。",
                     Required = false,
                     Position = 0,
                 },
             ],
-            Handler = _ => JunoPages.ReadDataAsync(),
+            Handler = context => JunoPages.ReadDataAsync(
+                context.GetString("view"),
+                context.Cancellation),
         });
 
         registry.Register(new CommandDescriptor
@@ -81,7 +80,9 @@ internal static class JunoCommandCatalog
             CommandClass = "sub2api",
             Summary = "检查 Sub2API 与本机代理端口状态。",
             Readonly = true,
-            Handler = _ => JunoPages.ReadDataAsync(),
+            Handler = context => JunoPages.ReadDataAsync(
+                JunoPages.StatusView,
+                context.Cancellation),
         });
     }
 
