@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using HistoryJuno;
@@ -11,6 +12,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ("credentials", TestCredentialsAsync),
     ("account paging and usage", TestAccountPagingAndUsageAsync),
     ("login redaction", TestLoginRedactionAsync),
+    ("startup runner", TestStartupRunnerAsync),
+    ("startup port readiness", TestStartupPortReadinessAsync),
 };
 
 var failed = 0;
@@ -172,6 +175,59 @@ static async Task TestLoginRedactionAsync()
     {
         True(!ex.Message.Contains(secret, StringComparison.Ordinal), "secret leaked through failure message");
         True(!ex.Message.Contains("credential rejected", StringComparison.Ordinal), "response body leaked");
+    }
+}
+
+static async Task TestStartupRunnerAsync()
+{
+    var invocation = Sub2ApiProcessRunner.BuildBoundedWslInvocation(
+        @"C:\tool's\sub2api-tool.ps1",
+        ["start"]);
+    True(invocation.Contains("curl --max-time 8", StringComparison.Ordinal), "WSL proxy probe is not bounded");
+    True(invocation.Contains("C:\\tool''s\\sub2api-tool.ps1", StringComparison.Ordinal), "script path is not escaped");
+
+    var previous = Environment.GetEnvironmentVariable("SUB2API_TOOL_ROOT");
+    var root = Path.Combine(Path.GetTempPath(), $"HistoryJuno-runner-{Guid.NewGuid():N}");
+    Directory.CreateDirectory(root);
+    try
+    {
+        Environment.SetEnvironmentVariable("SUB2API_TOOL_ROOT", root);
+        File.WriteAllText(Path.Combine(root, "slow.ps1"), "Start-Sleep -Seconds 5", Encoding.UTF8);
+        var started = DateTimeOffset.UtcNow;
+        var result = await Sub2ApiProcessRunner.RunAsync(
+            "slow.ps1",
+            [],
+            CancellationToken.None,
+            new ScriptRunOptions(TimeSpan.FromMilliseconds(300)));
+        True(!result.Success, "timed out script was reported as successful");
+        Equal(-2, result.ExitCode);
+        True(result.Output.Contains("已终止", StringComparison.Ordinal), "timeout is not actionable");
+        True(DateTimeOffset.UtcNow - started < TimeSpan.FromSeconds(4), "timeout did not bound execution");
+    }
+    finally
+    {
+        Environment.SetEnvironmentVariable("SUB2API_TOOL_ROOT", previous);
+        Directory.Delete(root, recursive: true);
+    }
+}
+
+static async Task TestStartupPortReadinessAsync()
+{
+    var listener = new TcpListener(IPAddress.Loopback, 0);
+    listener.Start();
+    try
+    {
+        var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+        True(
+            await JunoCommandCatalog.WaitForPortsAsync(
+                [port],
+                TimeSpan.FromSeconds(1),
+                CancellationToken.None),
+            "listening port was not detected");
+    }
+    finally
+    {
+        listener.Stop();
     }
 }
 

@@ -1,4 +1,5 @@
 using HistoryVulcan.Core.Commands;
+using System.Net.Sockets;
 
 namespace HistoryJuno;
 
@@ -6,6 +7,7 @@ internal static class JunoCommandCatalog
 {
     private const string Domain = "juno";
     private const string Owner = "HistoryJuno";
+    private static int startInProgress;
 
     public static void Register(CommandRegistry registry, CommandBus bus)
     {
@@ -49,7 +51,7 @@ internal static class JunoCommandCatalog
             CommandClass = "sub2api",
             Summary = "启动 Sub2API 服务。",
             Level = CommandLevel.Run,
-            Handler = async context => await RunScriptAsync("sub2api-tool.ps1", "start", context).ConfigureAwait(false),
+            Handler = StartSub2ApiAsync,
         });
 
         registry.Register(new CommandDescriptor
@@ -115,5 +117,83 @@ internal static class JunoCommandCatalog
         if (!string.IsNullOrWhiteSpace(result.Output))
             message += Environment.NewLine + result.Output;
         return result.Success ? CommandResult.Ok(message) : CommandResult.Fail(message);
+    }
+
+    private static async Task<CommandResult> StartSub2ApiAsync(CommandContext context)
+    {
+        if (Interlocked.CompareExchange(ref startInProgress, 1, 0) != 0)
+            return CommandResult.Fail("Sub2API 正在启动，请勿重复提交；稍后刷新状态即可。");
+
+        try
+        {
+            var result = await Sub2ApiProcessRunner.RunAsync(
+                    "sub2api-tool.ps1",
+                    ["start"],
+                    context.Cancellation,
+                    new ScriptRunOptions(TimeSpan.FromMinutes(2), BoundWslProxyProbe: true))
+                .ConfigureAwait(false);
+            if (!result.Success)
+                return ScriptFailure("sub2api-tool.ps1", result);
+
+            var ready = await WaitForPortsAsync([8080, 9090], TimeSpan.FromSeconds(20), context.Cancellation)
+                .ConfigureAwait(false);
+            if (!ready)
+            {
+                return CommandResult.Fail(
+                    "启动脚本已结束，但 Sub2API 端口 8080/9090 未就绪。请检查 WSL、Docker 与 compose 容器状态。");
+            }
+
+            return CommandResult.Ok("Sub2API 启动完成，管理端 8080 与导入页 9090 已监听。");
+        }
+        finally
+        {
+            Volatile.Write(ref startInProgress, 0);
+        }
+    }
+
+    private static CommandResult ScriptFailure(string script, ScriptResult result)
+    {
+        var message = $"{script} 执行失败（退出码 {result.ExitCode}）。";
+        if (!string.IsNullOrWhiteSpace(result.Output))
+            message += Environment.NewLine + result.Output;
+        return CommandResult.Fail(message);
+    }
+
+    internal static async Task<bool> WaitForPortsAsync(
+        IReadOnlyList<int> ports,
+        TimeSpan timeout,
+        CancellationToken cancellation)
+    {
+        var deadline = DateTimeOffset.UtcNow + timeout;
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            var states = await Task.WhenAll(ports.Select(port => CanConnectAsync(port, cancellation)))
+                .ConfigureAwait(false);
+            if (states.All(open => open))
+                return true;
+            await Task.Delay(TimeSpan.FromMilliseconds(500), cancellation).ConfigureAwait(false);
+        }
+
+        return false;
+    }
+
+    private static async Task<bool> CanConnectAsync(int port, CancellationToken cancellation)
+    {
+        try
+        {
+            using var client = new TcpClient();
+            using var probe = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+            probe.CancelAfter(TimeSpan.FromMilliseconds(350));
+            await client.ConnectAsync("127.0.0.1", port, probe.Token).ConfigureAwait(false);
+            return true;
+        }
+        catch (OperationCanceledException) when (!cancellation.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (SocketException)
+        {
+            return false;
+        }
     }
 }

@@ -5,22 +5,21 @@ namespace HistoryJuno;
 
 internal sealed record ScriptResult(bool Success, int ExitCode, string Output, string ScriptPath);
 
+internal sealed record ScriptRunOptions(TimeSpan Timeout, bool BoundWslProxyProbe = false)
+{
+    public static ScriptRunOptions Default { get; } = new(TimeSpan.FromMinutes(2));
+}
+
 internal static class Sub2ApiProcessRunner
 {
-    private static readonly string[] ToolRoots =
-    [
-        Environment.GetEnvironmentVariable("SUB2API_TOOL_ROOT") ?? "",
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-            "easyTOOL", "SU2API"),
-    ];
-
     public static async Task<ScriptResult> RunAsync(
         string scriptName,
         IReadOnlyList<string> arguments,
-        CancellationToken cancellation)
+        CancellationToken cancellation,
+        ScriptRunOptions? options = null)
     {
-        var root = ToolRoots.FirstOrDefault(path =>
+        options ??= ScriptRunOptions.Default;
+        var root = ToolRoots().FirstOrDefault(path =>
             !string.IsNullOrWhiteSpace(path) && Directory.Exists(path));
         if (root == null)
         {
@@ -50,10 +49,19 @@ internal static class Sub2ApiProcessRunner
         psi.ArgumentList.Add("-NonInteractive");
         psi.ArgumentList.Add("-ExecutionPolicy");
         psi.ArgumentList.Add("Bypass");
-        psi.ArgumentList.Add("-File");
-        psi.ArgumentList.Add(script);
-        foreach (var argument in arguments)
-            psi.ArgumentList.Add(argument);
+        if (options.BoundWslProxyProbe)
+        {
+            psi.ArgumentList.Add("-EncodedCommand");
+            psi.ArgumentList.Add(Convert.ToBase64String(
+                Encoding.Unicode.GetBytes(BuildBoundedWslInvocation(script, arguments))));
+        }
+        else
+        {
+            psi.ArgumentList.Add("-File");
+            psi.ArgumentList.Add(script);
+            foreach (var argument in arguments)
+                psi.ArgumentList.Add(argument);
+        }
 
         using var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
         try
@@ -66,9 +74,25 @@ internal static class Sub2ApiProcessRunner
             process.StandardInput.WriteLine();
             process.StandardInput.Close();
 
-            var stdout = process.StandardOutput.ReadToEndAsync(cancellation);
-            var stderr = process.StandardError.ReadToEndAsync(cancellation);
-            await process.WaitForExitAsync(cancellation).ConfigureAwait(false);
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+            timeout.CancelAfter(options.Timeout);
+            try
+            {
+                await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (!cancellation.IsCancellationRequested)
+            {
+                KillProcessTree(process);
+                await AwaitOutputAfterExitAsync(process, stdout, stderr).ConfigureAwait(false);
+                return new ScriptResult(
+                    false,
+                    -2,
+                    $"脚本执行超过 {FormatTimeout(options.Timeout)}，已终止本次任务。",
+                    script);
+            }
+
             var output = new StringBuilder();
             var standardOutput = await stdout.ConfigureAwait(false);
             var standardError = await stderr.ConfigureAwait(false);
@@ -89,21 +113,78 @@ internal static class Sub2ApiProcessRunner
         }
         catch (OperationCanceledException)
         {
-            try
-            {
-                if (!process.HasExited)
-                    process.Kill(entireProcessTree: true);
-            }
-            catch
-            {
-                // Cancellation is reported to the command bus; cleanup is best effort.
-            }
-
+            KillProcessTree(process);
             throw;
         }
         catch (Exception ex)
         {
             return new ScriptResult(false, -1, $"{ex.GetType().Name}: {ex.Message}", script);
+        }
+    }
+
+    internal static string BuildBoundedWslInvocation(
+        string script,
+        IReadOnlyList<string> arguments)
+    {
+        var invocation = new StringBuilder();
+        invocation.AppendLine("function wsl {");
+        invocation.AppendLine("  $junoArgs = @($args)");
+        invocation.AppendLine("  if ($junoArgs.Count -gt 0 -and [string]$junoArgs[-1] -match 'curl .*ip-api\\.com/json') {");
+        invocation.AppendLine("    $junoArgs[-1] = [regex]::Replace([string]$junoArgs[-1], '\\bcurl\\s+', 'curl --max-time 8 ', 1)");
+        invocation.AppendLine("  }");
+        invocation.AppendLine("  & \"$env:SystemRoot\\System32\\wsl.exe\" @junoArgs");
+        invocation.AppendLine("}");
+        invocation.Append("& '").Append(EscapePowerShellLiteral(script)).Append('\'');
+        foreach (var argument in arguments)
+            invocation.Append(" '").Append(EscapePowerShellLiteral(argument)).Append('\'');
+        invocation.AppendLine();
+        invocation.AppendLine("exit $LASTEXITCODE");
+        return invocation.ToString();
+    }
+
+    private static IEnumerable<string> ToolRoots()
+    {
+        yield return Environment.GetEnvironmentVariable("SUB2API_TOOL_ROOT") ?? "";
+        yield return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            "easyTOOL",
+            "SU2API");
+    }
+
+    private static string EscapePowerShellLiteral(string value)
+        => value.Replace("'", "''", StringComparison.Ordinal);
+
+    private static string FormatTimeout(TimeSpan timeout)
+        => timeout.TotalSeconds >= 60
+            ? $"{timeout.TotalMinutes:0.#} 分钟"
+            : $"{timeout.TotalSeconds:0.#} 秒";
+
+    private static void KillProcessTree(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+                process.Kill(entireProcessTree: true);
+        }
+        catch
+        {
+            // Cancellation and timeout cleanup are best effort.
+        }
+    }
+
+    private static async Task AwaitOutputAfterExitAsync(
+        Process process,
+        Task<string> stdout,
+        Task<string> stderr)
+    {
+        try
+        {
+            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+            await Task.WhenAll(stdout, stderr).WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        }
+        catch
+        {
+            // The timeout result must not be replaced by cleanup failures.
         }
     }
 }
