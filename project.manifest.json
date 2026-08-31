@@ -8,12 +8,13 @@
   "project": {
     "id": "2026-029",
     "name": "HistoryJuno",
-    "title": "HistoryJuno Sub2API \u8F7B\u91CF\u63A7\u5236\u9762\u677F",
+    "title": "HistoryJuno \u8D26\u53F7\u4E0E Sub2API \u63A7\u5236\u9762\u677F",
     "kind": [
       "desktop-module",
       "integration"
     ],
-    "status": "active"
+    "status": "active",
+    "version": "0.3.0"
   },
   "paths": {
     "activeRoots": [

@@ -1,5 +1,6 @@
 using HistoryVulcan.Core.Commands;
 using System.Net.Sockets;
+using System.Text.Json;
 
 namespace HistoryJuno;
 
@@ -8,6 +9,7 @@ internal static class JunoCommandCatalog
     private const string Domain = "juno";
     private const string Owner = "HistoryJuno";
     private static int startInProgress;
+    private static int importInProgress;
 
     public static void Register(CommandRegistry registry, CommandBus bus)
     {
@@ -38,10 +40,87 @@ internal static class JunoCommandCatalog
                     Required = false,
                     Position = 0,
                 },
+                new ParameterSpec
+                {
+                    Name = "group",
+                    Description = "账号管理分组筛选值。",
+                    Required = false,
+                },
+                new ParameterSpec
+                {
+                    Name = "status",
+                    Description = "账号管理状态筛选值。",
+                    Required = false,
+                },
             ],
             Handler = context => JunoPages.ReadDataAsync(
                 context.GetString("view"),
+                context.GetString("group"),
+                context.GetString("status"),
                 context.Cancellation),
+        });
+
+        registry.Register(new CommandDescriptor
+        {
+            Name = "juno.ui.groups",
+            Domain = Domain,
+            CommandClass = "ui",
+            Summary = "返回 Juno 分组选择候选。",
+            Readonly = true,
+            HiddenReason = "界面内部协议，对模型无意义",
+            Parameters =
+            [
+                new ParameterSpec
+                {
+                    Name = "purpose",
+                    Description = "候选用途：filter / import。",
+                    Required = false,
+                    Position = 0,
+                },
+            ],
+            Handler = context => JunoPages.ReadGroupOptionsAsync(
+                context.GetString("purpose"),
+                context.Cancellation),
+        });
+
+        registry.Register(new CommandDescriptor
+        {
+            Name = "juno.import.select",
+            Domain = Domain,
+            CommandClass = "import",
+            Summary = "为 Juno 账号导入页选择 JSON 来源。",
+            Level = CommandLevel.Run,
+            HiddenReason = "界面内部文件选择动作，对模型无意义",
+            Handler = context => JsonSourcePicker.SelectAsync(context.Cancellation),
+        });
+
+        registry.Register(new CommandDescriptor
+        {
+            Name = "juno.accounts.import",
+            Domain = Domain,
+            CommandClass = "accounts",
+            Summary = "导入账号，并设置所选分组和全局唯一代理。",
+            Level = CommandLevel.Ask,
+            HiddenReason = "导入来源包含本机账号凭据，只允许 Juno 页面调用",
+            Parameters =
+            [
+                new ParameterSpec
+                {
+                    Name = "source",
+                    Description = "本机 JSON 来源文件。",
+                    Required = true,
+                    Position = 0,
+                },
+                new ParameterSpec
+                {
+                    Name = "group",
+                    Description = "导入分组候选值。",
+                    Required = true,
+                    Position = 1,
+                },
+            ],
+            ConfirmPrompt = context => $"确认导入账号并绑定分组 {context.GetString("group")} 与全局代理？",
+            Handler = ImportAccountsAsync,
         });
 
         registry.Register(new CommandDescriptor
@@ -84,6 +163,8 @@ internal static class JunoCommandCatalog
             Readonly = true,
             Handler = context => JunoPages.ReadDataAsync(
                 JunoPages.StatusView,
+                null,
+                null,
                 context.Cancellation),
         });
     }
@@ -150,6 +231,89 @@ internal static class JunoCommandCatalog
         finally
         {
             Volatile.Write(ref startInProgress, 0);
+        }
+    }
+
+    private static async Task<CommandResult> ImportAccountsAsync(CommandContext context)
+    {
+        if (Interlocked.CompareExchange(ref importInProgress, 1, 0) != 0)
+            return CommandResult.Fail("账号正在导入，请勿重复提交；完成后刷新即可。");
+
+        try
+        {
+            var source = context.GetString("source")?.Trim();
+            if (string.IsNullOrWhiteSpace(source))
+                return CommandResult.Fail("请选择 JSON 来源。");
+            if (!JunoPages.TryParseGroupOption(context.GetString("group"), out var groupId))
+                return CommandResult.Fail("请选择有效的导入分组。");
+
+            string fullPath;
+            try
+            {
+                fullPath = Path.GetFullPath(source);
+            }
+            catch
+            {
+                return CommandResult.Fail("JSON 来源路径无效。");
+            }
+
+            if (!string.Equals(Path.GetExtension(fullPath), ".json", StringComparison.OrdinalIgnoreCase))
+                return CommandResult.Fail("JSON 来源必须是 .json 文件。");
+            if (!File.Exists(fullPath))
+                return CommandResult.Fail("找不到 JSON 来源文件。");
+            if (new FileInfo(fullPath).Length > 16 * 1024 * 1024)
+                return CommandResult.Fail("JSON 来源超过 16 MB，已拒绝导入。");
+
+            JsonDocument document;
+            try
+            {
+                await using var stream = File.OpenRead(fullPath);
+                document = await JsonDocument.ParseAsync(stream, cancellationToken: context.Cancellation)
+                    .ConfigureAwait(false);
+            }
+            catch (JsonException)
+            {
+                return CommandResult.Fail("JSON 来源格式无效。");
+            }
+            catch (IOException)
+            {
+                return CommandResult.Fail("无法读取 JSON 来源文件。");
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return CommandResult.Fail("没有权限读取 JSON 来源文件。");
+            }
+
+            using (document)
+            using (var client = Sub2ApiAdminClient.CreateDefault())
+            {
+                var outcome = await client.ImportAccountsAsync(
+                        document.RootElement,
+                        groupId,
+                        context.Cancellation)
+                    .ConfigureAwait(false);
+                var message = $"导入完成：新建 {outcome.Created} 个，自动配置 {outcome.Configured} 个，"
+                    + $"分组 {outcome.GroupId}，全局代理 {outcome.ProxyId}。";
+                if (outcome.Failed > 0)
+                    return CommandResult.Fail(message + $"另有 {outcome.Failed} 个导入失败。");
+                return CommandResult.Ok(message);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Sub2ApiAdminException ex)
+        {
+            return CommandResult.Fail(ex.Message);
+        }
+        catch
+        {
+            return CommandResult.Fail("账号导入失败，请检查 Sub2API 管理端、分组和代理状态。");
+        }
+        finally
+        {
+            Volatile.Write(ref importInProgress, 0);
         }
     }
 

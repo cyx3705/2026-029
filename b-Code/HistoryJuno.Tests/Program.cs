@@ -11,6 +11,9 @@ var tests = new (string Name, Func<Task> Run)[]
     ("status priority", TestStatusPriorityAsync),
     ("credentials", TestCredentialsAsync),
     ("account paging and usage", TestAccountPagingAndUsageAsync),
+    ("account filters", TestAccountFiltersAsync),
+    ("global proxy", TestGlobalProxyAsync),
+    ("account import", TestAccountImportAsync),
     ("login redaction", TestLoginRedactionAsync),
     ("startup runner", TestStartupRunnerAsync),
     ("startup port readiness", TestStartupPortReadinessAsync),
@@ -38,27 +41,54 @@ static Task TestPageProtocolAsync()
     using var description = JsonDocument.Parse(JunoPages.DescribeJson());
     var page = description.RootElement.GetProperty("pages")[0];
     Equal("sub2api", page.GetProperty("id").GetString());
+    Equal("Juno", page.GetProperty("title").GetString());
     var children = page.GetProperty("content").GetProperty("children");
     var rows = children[0].GetProperty("rows");
     Equal(2, rows.GetArrayLength());
     var selector = rows[1].GetProperty("widgets")[0];
     Equal("juno.section", selector.GetProperty("channel").GetString());
-    Equal("账号状态", selector.GetProperty("options")[0].GetString());
+    Equal("账号管理", selector.GetProperty("options")[0].GetString());
     Equal("服务状态", selector.GetProperty("options")[1].GetString());
 
     var switchNode = children[1];
     Equal("switch", switchNode.GetProperty("type").GetString());
-    Equal("账号状态", switchNode.GetProperty("children")[0].GetProperty("case").GetString());
-    Equal("juno-accounts", switchNode.GetProperty("children")[0].GetProperty("id").GetString());
+    var accountStack = switchNode.GetProperty("children")[0];
+    Equal("账号管理", accountStack.GetProperty("case").GetString());
+    var accountChildren = accountStack.GetProperty("children");
+    var filters = accountChildren[0].GetProperty("rows")[0].GetProperty("widgets");
+    Equal("检索分组", filters[0].GetProperty("label").GetString());
+    Equal("juno.ui.groups", filters[0].GetProperty("optionsSource").GetProperty("command").GetString());
+    Equal("检索状态", filters[1].GetProperty("label").GetString());
+    Equal("juno-accounts", accountChildren[1].GetProperty("id").GetString());
+    Equal(
+        "{selection.juno.account.group.value}",
+        accountChildren[1].GetProperty("dataSource").GetProperty("args").GetProperty("group").GetString());
     var serviceTable = switchNode.GetProperty("children")[1];
     Equal("juno-status", serviceTable.GetProperty("id").GetString());
     Equal(4, serviceTable.GetProperty("columns").GetArrayLength());
+
+    var importPage = description.RootElement.GetProperty("pages")[1];
+    Equal("juno-import", importPage.GetProperty("id").GetString());
+    Equal("账号导入", importPage.GetProperty("title").GetString());
+    Equal("sub2api", importPage.GetProperty("placement").GetProperty("tabTarget").GetString());
+    var importRows = importPage.GetProperty("content").GetProperty("children")[0].GetProperty("rows");
+    var source = importRows[0].GetProperty("widgets")[0];
+    Equal("sourcePicker", source.GetProperty("kind").GetString());
+    Equal("JSON 来源", source.GetProperty("label").GetString());
+    Equal("juno.import.select", source.GetProperty("selectCommand").GetString());
+    var importGroup = importRows[1].GetProperty("widgets")[0];
+    Equal("juno.ui.groups", importGroup.GetProperty("optionsSource").GetProperty("command").GetString());
 
     using var actions = JsonDocument.Parse(JunoPages.ActionsJson());
     var refresh = actions.RootElement.GetProperty("actions").EnumerateArray()
         .Single(action => action.GetProperty("id").GetString() == JunoPages.RefreshAction);
     Equal("aurora.ui.refreshdata", refresh.GetProperty("command").GetString());
     Equal("sub2api", refresh.GetProperty("args").GetProperty("page").GetString());
+    var import = actions.RootElement.GetProperty("actions").EnumerateArray()
+        .Single(action => action.GetProperty("id").GetString() == JunoPages.ImportAction);
+    Equal("juno.accounts.import", import.GetProperty("command").GetString());
+    Equal("{jsonSource}", import.GetProperty("args").GetProperty("source").GetString());
+    Equal("{selection.juno.import.group.value}", import.GetProperty("args").GetProperty("group").GetString());
     return Task.CompletedTask;
 }
 
@@ -157,6 +187,80 @@ static async Task TestAccountPagingAndUsageAsync()
     True(handler.Requests[3].Body.Contains("\"account_ids\":[1,3]"), "batch usage IDs are incorrect");
 }
 
+static Task TestAccountFiltersAsync()
+{
+    var now = new DateTimeOffset(2026, 8, 31, 12, 0, 0, TimeSpan.Zero);
+    var rows = JunoPages.BuildAccountRows(
+        [
+            new Sub2ApiAccountSnapshot(
+                Account(groupId: 9, groupName: "free"),
+                new Sub2ApiUsage(null, null),
+                false),
+            new Sub2ApiAccountSnapshot(
+                Account(status: "inactive", groupId: 5, groupName: "paid"),
+                null,
+                false),
+        ],
+        now,
+        "9 · free",
+        "正常");
+    Equal(1, rows.Count);
+    Equal("free", rows[0]["group"]);
+    Equal("win-proxy", rows[0]["proxy"]);
+    True(JunoPages.TryParseGroupOption("5 · paid", out var groupId), "group option was not parsed");
+    Equal(5L, groupId);
+    True(!JunoPages.TryParseGroupOption(JunoPages.AllGroups, out _), "all-groups was parsed as an ID");
+    return Task.CompletedTask;
+}
+
+static Task TestGlobalProxyAsync()
+{
+    var selected = Sub2ApiAdminClient.ResolveGlobalProxy(
+    [
+        new Sub2ApiProxy(4, "backup", "active", "203.0.113.10"),
+        new Sub2ApiProxy(1, "primary", "active", "203.0.113.10"),
+        new Sub2ApiProxy(2, "paused", "inactive", "203.0.113.20"),
+    ]);
+    Equal(1L, selected.Id);
+    Throws<Sub2ApiAdminException>(() => Sub2ApiAdminClient.ResolveGlobalProxy(
+    [
+        new Sub2ApiProxy(1, "one", "active", "203.0.113.10"),
+        new Sub2ApiProxy(2, "two", "active", "203.0.113.20"),
+    ]));
+    return Task.CompletedTask;
+}
+
+static async Task TestAccountImportAsync()
+{
+    var handler = new QueueHandler(
+        Json(HttpStatusCode.OK, """{"data":{"access_token":"runtime-token"}}"""),
+        Json(HttpStatusCode.OK, """{"data":{"items":[{"id":9,"name":"free","status":"active"}],"pages":1}}"""),
+        Json(HttpStatusCode.OK, """{"data":{"items":[{"id":1,"name":"win-proxy","status":"active","ip_address":"203.0.113.10"}],"pages":1}}"""),
+        Json(HttpStatusCode.OK, """{"data":{"items":[{"id":10,"name":"existing","platform":"openai","type":"oauth","status":"active","schedulable":true}],"pages":1}}"""),
+        Json(HttpStatusCode.OK, """{"data":{"account_created":1,"account_failed":0,"proxy_created":0,"proxy_reused":0,"proxy_failed":0}}"""),
+        Json(HttpStatusCode.OK, """{"data":{"items":[{"id":10,"name":"existing","platform":"openai","type":"oauth","status":"active","schedulable":true},{"id":11,"name":"new-account","platform":"openai","type":"oauth","status":"active","schedulable":true}],"pages":1}}"""),
+        Json(HttpStatusCode.OK, """{"data":{"id":11,"credentials":{"refresh_token":"test-token"}}}"""),
+        Json(HttpStatusCode.OK, """{"data":{"id":11}}"""));
+    using var http = new HttpClient(handler) { BaseAddress = new Uri("http://127.0.0.1:8080/") };
+    using var client = new Sub2ApiAdminClient(
+        http,
+        () => new Sub2ApiCredentials("admin@example.test", "do-not-leak"));
+    using var package = JsonDocument.Parse("""
+        {"data":{"accounts":[{"name":"new-account","platform":"openai","type":"oauth","credentials":{"refresh_token":"test-token"}}]}}
+        """);
+
+    var outcome = await client.ImportAccountsAsync(package.RootElement, 9, CancellationToken.None);
+    Equal(1, outcome.Created);
+    Equal(1, outcome.Configured);
+    Equal(8, handler.Requests.Count);
+    Equal("/api/v1/admin/accounts/data", handler.Requests[4].PathAndQuery);
+    Equal("/api/v1/admin/accounts/11", handler.Requests[7].PathAndQuery);
+    using var update = JsonDocument.Parse(handler.Requests[7].Body);
+    Equal(9L, update.RootElement.GetProperty("group_ids")[0].GetInt64());
+    Equal(1L, update.RootElement.GetProperty("proxy_id").GetInt64());
+    Equal("test-token", update.RootElement.GetProperty("credentials").GetProperty("refresh_token").GetString());
+}
+
 static async Task TestLoginRedactionAsync()
 {
     const string secret = "top-secret-password";
@@ -253,8 +357,24 @@ static Sub2ApiAccount Account(
     bool schedulable = true,
     DateTimeOffset? rateLimit = null,
     DateTimeOffset? overload = null,
-    DateTimeOffset? temp = null)
-    => new(1, "account", "openai", "oauth", status, null, schedulable, rateLimit, overload, temp);
+    DateTimeOffset? temp = null,
+    long groupId = 0,
+    string groupName = "")
+    => new(
+        1,
+        "account",
+        "openai",
+        "oauth",
+        status,
+        null,
+        schedulable,
+        rateLimit,
+        overload,
+        temp,
+        groupId > 0 ? [groupId] : null,
+        groupId > 0 ? [new Sub2ApiGroup(groupId, groupName, "active")] : null,
+        1,
+        new Sub2ApiProxySummary(1, "win-proxy"));
 
 static HttpResponseMessage Json(HttpStatusCode status, string json)
     => new(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
