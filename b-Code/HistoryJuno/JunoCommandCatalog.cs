@@ -126,14 +126,16 @@ internal static class JunoCommandCatalog
 
         try
         {
-            var result = await Sub2ApiProcessRunner.RunAsync(
-                    "sub2api-tool.ps1",
-                    ["start"],
-                    context.Cancellation,
-                    new ScriptRunOptions(TimeSpan.FromMinutes(2), BoundWslProxyProbe: true))
+            if (await WaitForPortsAsync([8080, 9090], TimeSpan.FromMilliseconds(600), context.Cancellation)
+                    .ConfigureAwait(false))
+            {
+                return CommandResult.Ok("Sub2API 已在运行，管理端 8080 与导入页 9090 均已监听。");
+            }
+
+            var result = await Sub2ApiStartupRunner.StartAsync(context.Cancellation)
                 .ConfigureAwait(false);
             if (!result.Success)
-                return ScriptFailure("sub2api-tool.ps1", result);
+                return CommandResult.Fail(result.Message);
 
             var ready = await WaitForPortsAsync([8080, 9090], TimeSpan.FromSeconds(20), context.Cancellation)
                 .ConfigureAwait(false);

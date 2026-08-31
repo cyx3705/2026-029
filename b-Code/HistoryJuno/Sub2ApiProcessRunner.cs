@@ -5,7 +5,7 @@ namespace HistoryJuno;
 
 internal sealed record ScriptResult(bool Success, int ExitCode, string Output, string ScriptPath);
 
-internal sealed record ScriptRunOptions(TimeSpan Timeout, bool BoundWslProxyProbe = false)
+internal sealed record ScriptRunOptions(TimeSpan Timeout)
 {
     public static ScriptRunOptions Default { get; } = new(TimeSpan.FromMinutes(2));
 }
@@ -49,19 +49,10 @@ internal static class Sub2ApiProcessRunner
         psi.ArgumentList.Add("-NonInteractive");
         psi.ArgumentList.Add("-ExecutionPolicy");
         psi.ArgumentList.Add("Bypass");
-        if (options.BoundWslProxyProbe)
-        {
-            psi.ArgumentList.Add("-EncodedCommand");
-            psi.ArgumentList.Add(Convert.ToBase64String(
-                Encoding.Unicode.GetBytes(BuildBoundedWslInvocation(script, arguments))));
-        }
-        else
-        {
-            psi.ArgumentList.Add("-File");
-            psi.ArgumentList.Add(script);
-            foreach (var argument in arguments)
-                psi.ArgumentList.Add(argument);
-        }
+        psi.ArgumentList.Add("-File");
+        psi.ArgumentList.Add(script);
+        foreach (var argument in arguments)
+            psi.ArgumentList.Add(argument);
 
         using var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
         try
@@ -122,26 +113,6 @@ internal static class Sub2ApiProcessRunner
         }
     }
 
-    internal static string BuildBoundedWslInvocation(
-        string script,
-        IReadOnlyList<string> arguments)
-    {
-        var invocation = new StringBuilder();
-        invocation.AppendLine("function wsl {");
-        invocation.AppendLine("  $junoArgs = @($args)");
-        invocation.AppendLine("  if ($junoArgs.Count -gt 0 -and [string]$junoArgs[-1] -match 'curl .*ip-api\\.com/json') {");
-        invocation.AppendLine("    $junoArgs[-1] = [regex]::Replace([string]$junoArgs[-1], '\\bcurl\\s+', 'curl --max-time 8 ', 1)");
-        invocation.AppendLine("  }");
-        invocation.AppendLine("  & \"$env:SystemRoot\\System32\\wsl.exe\" @junoArgs");
-        invocation.AppendLine("}");
-        invocation.Append("& '").Append(EscapePowerShellLiteral(script)).Append('\'');
-        foreach (var argument in arguments)
-            invocation.Append(" '").Append(EscapePowerShellLiteral(argument)).Append('\'');
-        invocation.AppendLine();
-        invocation.AppendLine("exit $LASTEXITCODE");
-        return invocation.ToString();
-    }
-
     private static IEnumerable<string> ToolRoots()
     {
         yield return Environment.GetEnvironmentVariable("SUB2API_TOOL_ROOT") ?? "";
@@ -150,9 +121,6 @@ internal static class Sub2ApiProcessRunner
             "easyTOOL",
             "SU2API");
     }
-
-    private static string EscapePowerShellLiteral(string value)
-        => value.Replace("'", "''", StringComparison.Ordinal);
 
     private static string FormatTimeout(TimeSpan timeout)
         => timeout.TotalSeconds >= 60

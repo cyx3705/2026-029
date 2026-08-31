@@ -180,11 +180,13 @@ static async Task TestLoginRedactionAsync()
 
 static async Task TestStartupRunnerAsync()
 {
-    var invocation = Sub2ApiProcessRunner.BuildBoundedWslInvocation(
-        @"C:\tool's\sub2api-tool.ps1",
-        ["start"]);
-    True(invocation.Contains("curl --max-time 8", StringComparison.Ordinal), "WSL proxy probe is not bounded");
-    True(invocation.Contains("C:\\tool''s\\sub2api-tool.ps1", StringComparison.Ordinal), "script path is not escaped");
+    True(
+        Sub2ApiStartupRunner.TryConvertToWslPath(@"C:\Users\Test User\deploy", out var wslPath),
+        "Windows deploy path was not mapped to WSL");
+    Equal("/mnt/c/Users/Test User/deploy", wslPath);
+    var composeCommand = Sub2ApiStartupRunner.BuildComposeCommand("/mnt/c/Users/Test User/deploy");
+    True(composeCommand.Contains("docker compose up -d", StringComparison.Ordinal), "compose start is missing");
+    True(!composeCommand.Contains("curl", StringComparison.Ordinal), "startup still contains the blocking proxy probe");
 
     var previous = Environment.GetEnvironmentVariable("SUB2API_TOOL_ROOT");
     var root = Path.Combine(Path.GetTempPath(), $"HistoryJuno-runner-{Guid.NewGuid():N}");

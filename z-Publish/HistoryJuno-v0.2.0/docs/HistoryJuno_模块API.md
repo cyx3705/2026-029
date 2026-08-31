@@ -17,7 +17,7 @@ HistoryVulcan.Core，页面通过 HistoryAurora 1.9.2 的描述化页面协议�
 
 | 指令 | 级别 | 用途 |
 | --- | --- | --- |
-| juno.sub2api.start | Run | 单实例调用 sub2api-tool.ps1 start；代理探测和脚本有超时上限，仅在 8080/9090 就绪后返回成功 |
+| juno.sub2api.start | Run | 单实例分阶段启动 Ubuntu Docker 与 Sub2API compose；阶段有超时上限，仅在 8080/9090 就绪后返回成功 |
 | juno.proxy.connect | Run | 调用 proxy-reconnect.ps1 |
 | juno.sub2api.stop | Ask | 确认后调用 sub2api-tool.ps1 stop |
 | juno.sub2api.status | Readonly | 探测 8080、9090、7890、17890 |

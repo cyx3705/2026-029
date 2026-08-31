@@ -20,7 +20,8 @@ Sub2API 轻量控制面板。它复用本机 PowerShell 工具，提供启动服
 obj 目录受文件系统策略限制，构建命令已将中间文件和输出放到 C 盘 .build。
 
 模块依赖 HistoryVulcan 5.1.2 发布快照，并从 SUB2API_TOOL_ROOT 或桌面
-easyTOOL/SU2API 查找 sub2api-tool.ps1 与 proxy-reconnect.ps1。启动动作会限制脚本中的
-WSL 外网探测与整体执行时间，拒绝重复启动，并以 8080/9090 实际监听作为成功条件。账号状态从本机
+easyTOOL/SU2API 查找 sub2api-tool.ps1 与 proxy-reconnect.ps1，供停止和代理连接动作使用。
+启动动作直接分阶段启动 Ubuntu Docker 服务和 Sub2API compose，拒绝重复启动，并以
+8080/9090 实际监听作为成功条件。账号状态从本机
 Sub2API 管理接口只读获取；凭据目录可由 SUB2API_DEPLOY_ROOT 指定，默认使用
 %USERPROFILE%/Projects/sub2api-deploy。
