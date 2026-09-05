@@ -159,6 +159,12 @@ internal static class JunoPages
                         source = "{jsonSource}",
                         group = "{selection.juno.import.group.value}",
                     }),
+                Action(
+                    "juno.import.source",
+                    "选择 JSON 来源",
+                    "aurora.ui.panelset",
+                    "更新导入来源路径，账号导入仍需单独确认。",
+                    args: new { panel = "import-controls", control = "jsonSource", value = "{value}" }),
             },
         };
         return JsonSerializer.Serialize(actions, JsonOptions);
@@ -326,6 +332,7 @@ internal static class JunoPages
                             id = "jsonSource",
                             label = "JSON 来源",
                             selectCommand = "juno.import.select",
+                            commitAction = "juno.import.source",
                             minWidth = 260,
                             flex = true,
                         },

@@ -1,7 +1,8 @@
 # HistoryJuno 模块 API
 
-HistoryJuno 0.3.0 面向 HistoryVulcan 5.1.2，指令域为 `juno`。模块只依赖
-HistoryVulcan.Core，页面通过 HistoryAurora 1.9.2 的描述化页面协议注册。
+HistoryJuno 0.3.1 面向 HistoryVulcan 5.1.2 及以上，指令域为 `juno`。模块只依赖
+HistoryVulcan.Core，页面通过 HistoryAurora 1.15.0 及以上的描述化页面协议注册。
+来源选择器通过 `commitAction` 回写路径；程序回写不再次提交，且不执行账号导入。
 
 ## 页面协议
 

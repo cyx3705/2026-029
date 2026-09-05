@@ -80,6 +80,12 @@ static Task TestPageProtocolAsync()
     Equal("juno.ui.groups", importGroup.GetProperty("optionsSource").GetProperty("command").GetString());
 
     using var actions = JsonDocument.Parse(JunoPages.ActionsJson());
+    var sourceCommit = actions.RootElement.GetProperty("actions").EnumerateArray()
+        .Single(action => action.GetProperty("id").GetString() == source.GetProperty("commitAction").GetString());
+    Equal("aurora.ui.panelset", sourceCommit.GetProperty("command").GetString());
+    Equal("import-controls", sourceCommit.GetProperty("args").GetProperty("panel").GetString());
+    Equal("jsonSource", sourceCommit.GetProperty("args").GetProperty("control").GetString());
+    Equal("{value}", sourceCommit.GetProperty("args").GetProperty("value").GetString());
     var refresh = actions.RootElement.GetProperty("actions").EnumerateArray()
         .Single(action => action.GetProperty("id").GetString() == JunoPages.RefreshAction);
     Equal("aurora.ui.refreshdata", refresh.GetProperty("command").GetString());
