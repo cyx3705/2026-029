@@ -14,7 +14,7 @@ Sub2API 账号与服务控制面板。`Juno` 页面提供启动、代理重连�
 | project.manifest.json | 项目身份、活动目录和构建命令 |
 | b-Code/HistoryJuno | 模块源码与 manifest |
 | b-Office/current | 当前需求、决策和验证合同 |
-| b-Office/package/HistoryJuno_模块API.md | 模块命令与页面协议 |
+| b-Office/package/模块API.md | 模块命令与页面协议 |
 
 ## 构建
 
