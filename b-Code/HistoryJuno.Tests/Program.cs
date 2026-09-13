@@ -39,6 +39,7 @@ return failed == 0 ? 0 : 1;
 static Task TestPageProtocolAsync()
 {
     using var description = JsonDocument.Parse(JunoPages.DescribeJson());
+    Equal(1, description.RootElement.GetProperty("pages").GetArrayLength());
     var page = description.RootElement.GetProperty("pages")[0];
     Equal("sub2api", page.GetProperty("id").GetString());
     Equal("Juno", page.GetProperty("title").GetString());
@@ -50,7 +51,10 @@ static Task TestPageProtocolAsync()
     Equal("账号管理", selector.GetProperty("options")[0].GetString());
     Equal("服务状态", selector.GetProperty("options")[1].GetString());
 
+    Equal(3, selector.GetProperty("options").GetArrayLength());
+    Equal("账号导入", selector.GetProperty("options")[2].GetString());
     var switchNode = children[1];
+    Equal(3, switchNode.GetProperty("children").GetArrayLength());
     Equal("switch", switchNode.GetProperty("type").GetString());
     var accountStack = switchNode.GetProperty("children")[0];
     Equal("账号管理", accountStack.GetProperty("case").GetString());
@@ -67,11 +71,11 @@ static Task TestPageProtocolAsync()
     Equal("juno-status", serviceTable.GetProperty("id").GetString());
     Equal(4, serviceTable.GetProperty("columns").GetArrayLength());
 
-    var importPage = description.RootElement.GetProperty("pages")[1];
-    Equal("juno-import", importPage.GetProperty("id").GetString());
-    Equal("账号导入", importPage.GetProperty("title").GetString());
-    Equal("sub2api", importPage.GetProperty("placement").GetProperty("tabTarget").GetString());
-    var importRows = importPage.GetProperty("content").GetProperty("children")[0].GetProperty("rows");
+    var importSection = switchNode.GetProperty("children")[2];
+    Equal("账号导入", importSection.GetProperty("case").GetString());
+    var importRows = importSection.GetProperty("children")[0].GetProperty("rows");
+    Equal(2, importRows.GetArrayLength());
+    Equal("juno-import-accounts", importSection.GetProperty("children")[1].GetProperty("id").GetString());
     var source = importRows[0].GetProperty("widgets")[0];
     Equal("sourcePicker", source.GetProperty("kind").GetString());
     Equal("JSON 来源", source.GetProperty("label").GetString());
@@ -80,10 +84,19 @@ static Task TestPageProtocolAsync()
     Equal("juno.ui.groups", importGroup.GetProperty("optionsSource").GetProperty("command").GetString());
 
     using var actions = JsonDocument.Parse(JunoPages.ActionsJson());
+    var sourceCommit = actions.RootElement.GetProperty("actions").EnumerateArray()
+        .Single(action => action.GetProperty("id").GetString() == source.GetProperty("commitAction").GetString());
+    Equal("aurora.ui.panelset", sourceCommit.GetProperty("command").GetString());
+    Equal("import-controls", sourceCommit.GetProperty("args").GetProperty("panel").GetString());
+    Equal("jsonSource", sourceCommit.GetProperty("args").GetProperty("control").GetString());
+    Equal("{value}", sourceCommit.GetProperty("args").GetProperty("value").GetString());
     var refresh = actions.RootElement.GetProperty("actions").EnumerateArray()
         .Single(action => action.GetProperty("id").GetString() == JunoPages.RefreshAction);
     Equal("aurora.ui.refreshdata", refresh.GetProperty("command").GetString());
     Equal("sub2api", refresh.GetProperty("args").GetProperty("page").GetString());
+    foreach (var refreshAction in actions.RootElement.GetProperty("actions").EnumerateArray()
+        .Where(action => action.GetProperty("command").GetString() == "aurora.ui.refreshdata"))
+        Equal("sub2api", refreshAction.GetProperty("args").GetProperty("page").GetString());
     var import = actions.RootElement.GetProperty("actions").EnumerateArray()
         .Single(action => action.GetProperty("id").GetString() == JunoPages.ImportAction);
     Equal("juno.accounts.import", import.GetProperty("command").GetString());

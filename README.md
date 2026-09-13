@@ -1,9 +1,9 @@
 # HistoryJuno
 
-HistoryJuno 0.3.0 是一个加载到 HistoryVulcan 并显示在 HistoryAurora 主页面中的
+HistoryJuno 0.4.0 是一个加载到 HistoryVulcan 并显示在 HistoryAurora 主页面中的
 Sub2API 账号与服务控制面板。`Juno` 页面提供启动、代理重连、关闭和刷新，
-并在账号管理/服务状态两个子页间切换；账号管理支持按分组和状态检索。
-独立的“账号导入”页复用 Aurora 通用 JSON 来源组件，可选择导入分组，并在导入后
+并在账号管理/服务状态/账号导入三个子页间切换；账号管理支持按分组和状态检索。
+Juno 内的“账号导入”子页复用 Aurora 通用 JSON 来源组件，可选择导入分组，并在导入后
 自动绑定本机唯一的活动代理 IP，不创建独立网页。
 
 ## 项目入口
