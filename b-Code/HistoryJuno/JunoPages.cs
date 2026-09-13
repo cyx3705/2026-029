@@ -13,6 +13,7 @@ internal static class JunoPages
     internal const string StatusView = "status";
     internal const string AccountsSection = "账号管理";
     internal const string ServicesSection = "服务状态";
+    internal const string ImportSection = "账号导入";
     internal const string AllGroups = "全部分组";
     internal const string AllStatuses = "全部状态";
 
@@ -93,31 +94,20 @@ internal static class JunoPages
                                             new { key = "detail", title = "详情", width = "*" },
                                         },
                                     },
+                                    new
+                                    {
+                                        type = "stack",
+                                        @case = ImportSection,
+                                        orientation = "vertical",
+                                        gap = "tight",
+                                        children = new object[]
+                                        {
+                                            ImportControls(),
+                                            AccountTable("juno-import-accounts", new { view = AccountsView }),
+                                        },
+                                    },
                                 },
                             },
-                        },
-                    },
-                },
-                new
-                {
-                    id = "juno-import",
-                    title = "账号导入",
-                    placement = new
-                    {
-                        side = "tab",
-                        tabTarget = "sub2api",
-                        visible = true,
-                        singleton = true,
-                    },
-                    content = new
-                    {
-                        type = "stack",
-                        orientation = "vertical",
-                        gap = "tight",
-                        children = new object[]
-                        {
-                            ImportControls(),
-                            AccountTable("juno-import-accounts", new { view = AccountsView }),
                         },
                     },
                 },
@@ -148,7 +138,7 @@ internal static class JunoPages
                     "刷新",
                     "aurora.ui.refreshdata",
                     "重新读取导入页账号和动态分组。",
-                    args: new { page = "juno-import" }),
+                    args: new { page = "sub2api" }),
                 Action(
                     ImportAction,
                     "导入账号",
@@ -254,7 +244,7 @@ internal static class JunoPages
                             label = "视图",
                             mode = "select",
                             channel = "juno.section",
-                            options = new[] { AccountsSection, ServicesSection },
+                            options = new[] { AccountsSection, ServicesSection, ImportSection },
                         },
                     },
                 },
@@ -359,16 +349,6 @@ internal static class JunoPages
                             flex = true,
                         },
                         new { kind = "button", text = "导入账号", action = ImportAction },
-                    },
-                },
-                new
-                {
-                    mode = "even",
-                    widgets = new object[]
-                    {
-                        new { kind = "button", text = "启动 Sub2API", action = StartAction },
-                        new { kind = "button", text = "代理重连", action = ProxyAction },
-                        new { kind = "button", text = "刷新", icon = "refresh-cw", action = ImportRefreshAction },
                     },
                 },
             },

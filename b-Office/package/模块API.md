@@ -1,13 +1,13 @@
 # HistoryJuno 模块 API
 
-HistoryJuno 0.3.0 面向 HistoryVulcan 5.1.2，指令域为 `juno`。模块只依赖
-HistoryVulcan.Core，页面通过 HistoryAurora 1.9.2 的描述化页面协议注册。
+HistoryJuno 0.4.0 面向 HistoryVulcan 5.1.2，指令域为 `juno`。模块只依赖
+HistoryVulcan.Core，页面通过 HistoryAurora 1.15.0 及以上的描述化页面协议注册。
+来源选择器通过 `commitAction` 回写路径；程序回写不再次提交，且不执行账号导入。
 
 ## 页面协议
 
-- `juno.ui.describe` 返回两个页面：标题为 `Juno` 的 `sub2api` 主页面，以及与其同组的
-  `juno-import`“账号导入”页面。
-- Juno 主页面通过 `juno.section` 在“账号管理”和“服务状态”间切换。账号管理上方有两个
+- `juno.ui.describe` 只返回标题为 `Juno` 的 `sub2api` 主页面；账号导入是其内部子页。
+- Juno 主页面通过 `juno.section` 在“账号管理”、“服务状态”和“账号导入”间切换。账号管理上方有两个
   `textbox mode=select` 多态框，分别发布 `juno.account.group` 与 `juno.account.status` 通道。
 - `juno.ui.groups purpose=filter|import` 返回动态分组候选，每行只有 `value` 字段；filter 模式
   额外返回“全部分组”。
@@ -15,7 +15,7 @@ HistoryVulcan.Core，页面通过 HistoryAurora 1.9.2 的描述化页面协议�
   `account`、`group`、`status`、`proxy`、`fiveHour`、`sevenDay`。
 - `juno.ui.data view=status` 返回服务状态行。不传 view 时仍按兼容行为返回 status；未知 view 失败。
 - 账号导入页使用 Aurora `sourcePicker`，选择命令为 `juno.import.select`；导入分组由
-  `juno.ui.groups purpose=import` 提供。页面控制面板复用启动、代理重连和刷新动作。
+  `juno.ui.groups purpose=import` 提供。三个子页共用顶部服务控制；刷新动作（含兼容的 juno.import.refresh）均指向 sub2api。
 
 ## 业务指令
 
