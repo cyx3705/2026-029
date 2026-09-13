@@ -43,6 +43,8 @@ static Task TestPageProtocolAsync()
     var page = description.RootElement.GetProperty("pages")[0];
     Equal("sub2api", page.GetProperty("id").GetString());
     Equal("Juno", page.GetProperty("title").GetString());
+    Equal("HistoryJuno", page.GetProperty("scene").GetString());
+    Equal("center", page.GetProperty("placement").GetProperty("side").GetString());
     var children = page.GetProperty("content").GetProperty("children");
     var rows = children[0].GetProperty("rows");
     Equal(2, rows.GetArrayLength());

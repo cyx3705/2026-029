@@ -43,7 +43,8 @@ internal static class JunoPages
                 {
                     id = "sub2api",
                     title = "Juno",
-                    placement = new { side = "right", visible = true, singleton = true },
+                    scene = "HistoryJuno",
+                    placement = new { side = "center", visible = true, singleton = true },
                     content = new
                     {
                         type = "stack",
