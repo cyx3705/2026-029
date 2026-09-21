@@ -2,8 +2,6 @@
 
 > Sub2API 账号与服务控制面板：启动、代理重连、账号管理与导入
 
-![OneHistory Logo](./Logo.png)
-
 ## 定位
 
 HistoryJuno 是加载到 HistoryVulcan、显示在 HistoryAurora 中的 Sub2API 控制面板。`Juno` 页面提供启动、代理重连、
@@ -80,6 +78,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\b-Code\Test-ProjectContrac
 - 账号、分组、代理和导入走本机 Sub2API 管理接口；凭据目录由 `SUB2API_DEPLOY_ROOT` 指定，默认 `%USERPROFILE%/Projects/sub2api-deploy`。
 - 账号 JSON、管理密码、令牌和原始响应只在内存及 127.0.0.1 回环中使用，不进日志或页面数据。
 
----
+## 保留内容
+- 本模板项目介绍：此为最初的准备的项目模板
+    每个分支项目都会由他去继承
+- 作者：Pinavia - 2025
 
-作者：Pinavia
+![logo](./Logo.png)
