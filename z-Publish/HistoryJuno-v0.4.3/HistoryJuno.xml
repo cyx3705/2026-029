@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>HistoryJuno</name>
+    </assembly>
+    <members>
+        <member name="T:HistoryJuno.HistoryJunoModule">
+            <summary>把 Juno 的命令和 Aurora 页面声明接入宿主总线。</summary>
+        </member>
+        <member name="T:HistoryJuno.ModuleInfo">
+            <summary>HistoryJuno 在 HistoryVulcan 注册表中的模块身份。</summary>
+        </member>
+    </members>
+</doc>
