@@ -14,7 +14,8 @@
       "integration"
     ],
     "status": "active",
-    "version": "0.4.1"
+    "version": "0.4.2",
+    "branch": "main"
   },
   "paths": {
     "activeRoots": [
@@ -61,7 +62,7 @@
   ],
   "contextExclusions": [
     "b-Office/history/**",
-    "b-Publish/**",
+    "z-Publish/**",
     "**/bin/**",
     "**/obj/**",
     "**/node_modules/**",

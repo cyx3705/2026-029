@@ -1,4 +1,6 @@
 <Project>
+  <!-- 就近的 Directory.Build.props 会遮住仓库根那份；显式接上，才能拿到工作区的本机覆盖点。 -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
   <PropertyGroup>
     <BaseIntermediateOutputPath>$(LOCALAPPDATA)\HistoryJuno\Tests\obj\</BaseIntermediateOutputPath>
   </PropertyGroup>

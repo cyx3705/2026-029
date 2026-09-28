@@ -5,7 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>HistoryJuno.Tests</AssemblyName>
-    <HistoryVulcanHostRoot Condition="'$(HistoryVulcanHostRoot)' == ''">C:\OneHistory\HistoryClio\2026-023-HistoryVulcan\z-Publish\host</HistoryVulcanHostRoot>
+    <HistoryVulcanPackageRoot Condition="'$(HistoryVulcanPackageRoot)' == ''">$(MSBuildThisFileDirectory)..\..\..\2026-023-HistoryVulcan\z-Publish</HistoryVulcanPackageRoot>
+    <HistoryVulcanHostRoot Condition="'$(HistoryVulcanHostRoot)' == ''">$(HistoryVulcanPackageRoot)\host</HistoryVulcanHostRoot>
     <OutputPath>$(LOCALAPPDATA)\HistoryJuno\Tests\bin\</OutputPath>
   </PropertyGroup>
 
