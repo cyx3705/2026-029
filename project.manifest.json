@@ -68,5 +68,49 @@
     "**/node_modules/**",
     "**/.vs/**",
     "artifacts/**"
-  ]
+  ],
+  "publish": {
+    "versionProps": "b-Code\\HistoryJuno\\HistoryJunoVersion.props",
+    "versionProperty": "HistoryJunoVersion",
+    "sourceManifest": "b-Code\\HistoryJuno\\module.manifest.json",
+    "package": {
+      "project": "b-Code\\HistoryJuno\\HistoryJuno.csproj",
+      "files": [
+        "HistoryJuno.dll",
+        "HistoryJuno.xml",
+        "module.manifest.json"
+      ]
+    },
+    "validation": [
+      {
+        "tool": "dotnet.exe",
+        "configurations": [
+          "Release"
+        ],
+        "arguments": [
+          "build",
+          "b-Code\\HistoryJuno\\HistoryJuno.csproj",
+          "-c",
+          "{configuration}",
+          "-p:NuGetAudit=false"
+        ],
+        "description": "Run HistoryJuno Release build ({configuration})"
+      },
+      {
+        "tool": "dotnet.exe",
+        "configurations": [
+          "Release"
+        ],
+        "arguments": [
+          "run",
+          "--project",
+          "b-Code\\HistoryJuno.Tests\\HistoryJuno.Tests.csproj",
+          "-c",
+          "{configuration}",
+          "-p:NuGetAudit=false"
+        ],
+        "description": "Run HistoryJuno offline tests ({configuration})"
+      }
+    ]
+  }
 }
