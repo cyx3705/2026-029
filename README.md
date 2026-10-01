@@ -19,7 +19,7 @@ HistoryJuno 是加载到 HistoryVulcan、显示在 HistoryAurora 中的 Sub2API 
 | 指令域 | `juno` |
 | 界面 | Aurora 描述化页面 `Juno` |
 | MCP 投影 | `readonly`；`juno.ui.*` 与 `juno.import.select` 对远程模型隐藏 |
-| 版本与宿主下限 | [`HistoryJunoVersion.props`](./b-Code/HistoryJuno/HistoryJunoVersion.props)；宿主下限见 [模块 API](./b-Office/package/模块API.md) |
+| 版本与宿主下限 | [`HistoryJunoVersion.props`](./b-Code/HistoryJuno/HistoryJunoVersion.props)；最低宿主 HistoryVulcan 6.0.0（[有效决策](./b-Office/current/有效决策.md) DEC-009） |
 
 ## 能力
 
@@ -31,7 +31,7 @@ HistoryJuno 是加载到 HistoryVulcan、显示在 HistoryAurora 中的 Sub2API 
 | `juno.proxy.connect` | 更新端口转发、Sub2API 全局代理与代理 IP |
 | `juno.accounts.import` | 导入账号并绑定所选分组与唯一全局代理 |
 
-页面协议与导入流程见 [模块 API](./b-Office/package/模块API.md)。
+页面协议与导入流程见 [技术合同](./b-Office/current/技术合同.md)；指令参数读注册自描述：`diana.docs.read domain=juno`（宿主 6.1.0 起没有消费文档）。
 
 ## 入口
 
@@ -44,7 +44,6 @@ HistoryJuno 是加载到 HistoryVulcan、显示在 HistoryAurora 中的 Sub2API 
 | [技术合同](./b-Office/current/技术合同.md) | 现行需求与架构 |
 | [有效决策](./b-Office/current/有效决策.md) | 仍然有效的关键决策 |
 | [验证合同](./b-Office/current/验证合同.md) | 验证层级、命令与证据 |
-| [模块 API](./b-Office/package/模块API.md) | 跨模块消费合同 |
 
 ## 目录
 
@@ -53,7 +52,7 @@ HistoryJuno 是加载到 HistoryVulcan、显示在 HistoryAurora 中的 Sub2API 
 | `b-Code/HistoryJuno/` | 模块源码与 manifest |
 | `b-Code/HistoryJuno.Tests/` | 自动验证 |
 | `b-Code/` | 项目合同检查 |
-| `b-Office/` | 项目文档：`current/` 现行合同、`package/` 消费合同、`history/` 只读归档 |
+| `b-Office/` | 项目文档：`current/` 现行合同、`history/` 只读归档 |
 | `z-Publish/` | 正式快照，由宿主管线写入 |
 
 ## 构建与验证

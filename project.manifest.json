@@ -20,7 +20,6 @@
   "paths": {
     "activeRoots": [
       "b-Office/current",
-      "b-Office/package",
       "b-Code/HistoryJuno",
       "b-Code"
     ],
@@ -39,7 +38,6 @@
   },
   "documents": {
     "center": "b-Office/\u6587\u6863\u4E2D\u5FC3.md",
-    "package": "b-Office/package/\u6A21\u5757API.md",
     "structure": "b-Office/\u6587\u6863\u4E2D\u5FC3.md",
     "overview": "b-Office/current/\u9879\u76EE\u6982\u89C8.md",
     "technicalContract": "b-Office/current/\u6280\u672F\u5408\u540C.md",
