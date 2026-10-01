@@ -11,7 +11,7 @@ internal static class JunoCommandCatalog
     private static int startInProgress;
     private static int importInProgress;
 
-    public static void Register(CommandRegistry registry, CommandBus bus)
+    public static void Register(ICommandRegistrar registry, ICommandBus bus)
     {
         registry.Register(Internal(
             "juno.ui.describe",
