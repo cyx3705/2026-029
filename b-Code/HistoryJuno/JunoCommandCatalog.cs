@@ -29,6 +29,7 @@ internal static class JunoCommandCatalog
             Domain = Domain,
             CommandClass = "ui",
             Summary = "返回 Sub2API 控制面板账号或服务状态行。",
+            Example = "juno.ui.data view=accounts group=全部分组 status=限流",
             Readonly = true,
             HiddenReason = "界面内部协议，对模型无意义",
             Parameters =
@@ -36,21 +37,23 @@ internal static class JunoCommandCatalog
                 new ParameterSpec
                 {
                     Name = "view",
-                    Description = "取数视图：accounts / status。",
+                    Description = "取数视图：accounts 账号管理表、status 服务状态表；省略按 status。",
                     Required = false,
+                    AllowedValues = ["accounts", "status"],
                     Position = 0,
                 },
                 new ParameterSpec
                 {
                     Name = "group",
-                    Description = "账号管理分组筛选值。",
+                    Description = "账号管理的分组筛选，取 juno.ui.groups purpose=filter 的候选 value（形如 3·default）；全部分组或省略表示不过滤。",
                     Required = false,
                 },
                 new ParameterSpec
                 {
                     Name = "status",
-                    Description = "账号管理状态筛选值。",
+                    Description = "账号管理的状态筛选；全部状态或省略表示不过滤。",
                     Required = false,
+                    AllowedValues = ["全部状态", "正常", "暂停调度", "停用", "临时不可调度", "错误", "过载", "限流"],
                 },
             ],
             Handler = context => JunoPages.ReadDataAsync(
@@ -66,6 +69,7 @@ internal static class JunoCommandCatalog
             Domain = Domain,
             CommandClass = "ui",
             Summary = "返回 Juno 分组选择候选。",
+            Example = "juno.ui.groups purpose=filter",
             Readonly = true,
             HiddenReason = "界面内部协议，对模型无意义",
             Parameters =
@@ -73,8 +77,9 @@ internal static class JunoCommandCatalog
                 new ParameterSpec
                 {
                     Name = "purpose",
-                    Description = "候选用途：filter / import。",
+                    Description = "候选用途：filter 账号筛选（首行多一个「全部分组」）、import 导入目标分组；只列 active 分组。",
                     Required = false,
+                    AllowedValues = ["filter", "import"],
                     Position = 0,
                 },
             ],
@@ -100,6 +105,7 @@ internal static class JunoCommandCatalog
             Domain = Domain,
             CommandClass = "accounts",
             Summary = "导入账号，并设置所选分组和全局唯一代理。",
+            Example = @"juno.accounts.import source=D:\exports\accounts.json group=3·default",
             Level = CommandLevel.Ask,
             HiddenReason = "导入来源包含本机账号凭据，只允许 Juno 页面调用",
             Parameters =
@@ -107,14 +113,14 @@ internal static class JunoCommandCatalog
                 new ParameterSpec
                 {
                     Name = "source",
-                    Description = "本机 JSON 来源文件。",
+                    Description = "本机 .json 导出文件的绝对路径（≤16 MB，Sub2API 导出格式；含空格时整段加引号）。",
                     Required = true,
                     Position = 0,
                 },
                 new ParameterSpec
                 {
                     Name = "group",
-                    Description = "导入分组候选值。",
+                    Description = "导入目标分组，取 juno.ui.groups purpose=import 的候选 value（形如 3·default），必须是 active 分组。",
                     Required = true,
                     Position = 1,
                 },
