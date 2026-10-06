@@ -31,7 +31,7 @@ HistoryJuno 是加载到 HistoryVulcan、显示在 HistoryAurora 中的 Sub2API 
 | `juno.proxy.connect` | 更新端口转发、Sub2API 全局代理与代理 IP |
 | `juno.accounts.import` | 导入账号并绑定所选分组与唯一全局代理 |
 
-指令参数读注册自描述：`diana.docs.read domain=juno`（宿主 6.1.0 起没有消费文档）。取舍与外部路径见 [现行约定](./b-Office/current/现行约定.md)。
+指令参数读注册自描述：`diana.docs.read domain=juno`（宿主 6.1.0 起没有消费文档）。取舍与外部路径见 [现行约定](./b-Office/现行约定.md)。
 
 ## 入口
 
@@ -39,7 +39,7 @@ HistoryJuno 是加载到 HistoryVulcan、显示在 HistoryAurora 中的 Sub2API 
 | --- | --- |
 | [`AGENTS.md`](./AGENTS.md) | AI 工作合同：读取顺序、真值判定、边界 |
 | [`project.manifest.json`](./project.manifest.json) | 项目身份、活动目录、文档与命令 |
-| [现行约定](./b-Office/current/现行约定.md) | 唯一的长期文档：真相在哪、取舍、真机才知道的、工程约定 |
+| [现行约定](./b-Office/现行约定.md) | 唯一的长期文档：真相在哪、取舍、真机才知道的、工程约定 |
 
 ## 目录
 
