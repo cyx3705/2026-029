@@ -10,6 +10,9 @@ internal static class Sub2ApiStartupRunner
     private static readonly TimeSpan DockerServiceTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan ComposeTimeout = TimeSpan.FromSeconds(90);
 
+    // 不调用 sub2api-tool.ps1 的启动段：它在 Docker 起来之前先探外网代理，
+    // 代理异常时按钮一直等不到回执。这里只跑两条已在本机验证过的命令，并分别封顶；
+    // 成功看端口，不在这里同步代理配置。
     public static async Task<StartupResult> StartAsync(CancellationToken cancellation)
     {
         var deployRoot = ResolveDeployRoot();

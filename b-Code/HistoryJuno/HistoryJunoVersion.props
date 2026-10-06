@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <HistoryJunoVersion>0.5.1</HistoryJunoVersion>
+    <HistoryJunoVersion>0.5.2</HistoryJunoVersion>
     <Version>$(HistoryJunoVersion)</Version>
   </PropertyGroup>
 </Project>
